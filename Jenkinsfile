@@ -3,9 +3,18 @@ pipeline{
     stages{
         stage('Clone repo'){
             steps{
-                git branch: 'main', url: 'https://github.com/prashantgohel321/DevOps-Project-Two-Tier-Flask-App.git'
+                git branch: 'main', url: 'https://github.com/adirathoreudr/DevOps_Flask_TwoTIerProject.git'
             }
         }
+
+       stage('Cleanup') {
+    steps {
+        sh '''
+        docker compose down --volumes --remove-orphans || true
+        docker rm -f $(docker ps -aq) || true
+        '''
+    }
+}
         stage('Build image'){
             steps{
                 sh 'docker build -t flask-app .'

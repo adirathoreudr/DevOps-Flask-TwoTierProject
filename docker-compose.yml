@@ -2,7 +2,6 @@ version: "3.8"
 
 services:
   mysql:
-    container_name: mysql
     image: mysql
     environment:
       MYSQL_ROOT_PASSWORD: "root"
@@ -26,7 +25,6 @@ services:
 
 
   flask-app:
-    container_name: two-tier-app
     build:
       context: .
 
