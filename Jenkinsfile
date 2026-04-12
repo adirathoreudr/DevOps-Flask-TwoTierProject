@@ -28,5 +28,10 @@ pipeline{
                 sh 'docker compose up -d --build'
             }
         }
+        stage('Train Model') {
+    steps {
+        sh 'python3 model/train_model.py'
+    }
+}
     }
 }
