@@ -30,7 +30,12 @@ pipeline{
         }
         stage('Train Model') {
     steps {
-        sh 'python3 model/train_model.py'
+        sh '''
+        python3 -m venv venv
+        source venv/bin/activate
+        pip install -r requirement.txt
+        python model/train_model.py
+        '''
     }
 }
     }
