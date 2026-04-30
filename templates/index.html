@@ -121,26 +121,60 @@
         .messages {
             margin-bottom: 16px;
             padding: 12px;
-            background: rgba(85, 153, 255, 0.07);
-            border: 1px solid rgba(85, 153, 255, 0.18);
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(85, 153, 255, 0.15);
             border-radius: 12px;
-            min-height: 52px;
-            max-height: 180px;
+            min-height: 100px;
+            max-height: 250px;
             overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
         }
 
-        .messages p {
-            padding: 8px 12px;
-            background: rgba(255, 255, 255, 0.06);
-            border-left: 3px solid #5599FF;
-            border-radius: 6px;
-            margin-bottom: 6px;
-            font-size: 0.92rem;
+        .message-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 14px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            border-left: 4px solid #5599FF;
+            transition: transform 0.2s ease;
+        }
+
+        .message-item:hover {
+            transform: scale(1.01);
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .message-text {
+            font-size: 0.95rem;
             color: #dce8ff;
+            word-break: break-word;
         }
 
-        .messages p:last-child {
-            margin-bottom: 0;
+        .sentiment-badge {
+            font-size: 0.7rem;
+            font-weight: 700;
+            padding: 2px 8px;
+            border-radius: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-left: 10px;
+            flex-shrink: 0;
+        }
+
+        .sentiment-positive {
+            background: rgba(76, 175, 80, 0.2);
+            color: #81c784;
+            border: 1px solid rgba(76, 175, 80, 0.4);
+        }
+
+        .sentiment-negative {
+            background: rgba(244, 67, 54, 0.2);
+            color: #e57373;
+            border: 1px solid rgba(244, 67, 54, 0.4);
         }
 
         .messages:empty::after {
@@ -149,7 +183,7 @@
             font-size: 0.85rem;
             display: block;
             text-align: center;
-            padding: 8px 0;
+            padding: 20px 0;
         }
 
         /* Form */
@@ -160,18 +194,18 @@
 
         input[type="text"] {
             flex: 1;
-            padding: 12px 16px;
+            padding: 14px 18px;
             border: 1px solid rgba(85, 153, 255, 0.3);
             background: rgba(255, 255, 255, 0.05);
             color: #fff;
-            border-radius: 8px;
-            font-size: 15px;
+            border-radius: 10px;
+            font-size: 16px;
             transition: all 0.3s ease;
         }
 
         input[type="text"]:focus {
             border-color: #5599FF;
-            box-shadow: 0 0 12px rgba(85, 153, 255, 0.4);
+            box-shadow: 0 0 15px rgba(85, 153, 255, 0.3);
             outline: none;
         }
 
@@ -180,21 +214,20 @@
         }
 
         input[type="submit"] {
-            padding: 12px 28px;
-            background: #5599FF;
+            padding: 12px 32px;
+            background: linear-gradient(135deg, #5599FF, #417ad6);
             color: #ffffff;
             border: none;
-            border-radius: 8px;
+            border-radius: 10px;
             cursor: pointer;
-            font-size: 15px;
+            font-size: 16px;
             font-weight: 600;
             transition: all 0.3s ease;
             white-space: nowrap;
         }
 
         input[type="submit"]:hover {
-            background: #417ad6;
-            box-shadow: 0 0 18px rgba(85, 153, 255, 0.5);
+            box-shadow: 0 0 20px rgba(85, 153, 255, 0.4);
             transform: translateY(-2px);
         }
 
@@ -242,16 +275,19 @@
                 sentiment prediction — <em>Positive</em> or <em>Negative</em>.
                 The trained model is serialised with Python's <code>pickle</code> module and loaded at app
                 startup, exposing predictions via the <code>/predict</code> REST endpoint (JSON in / JSON out).
-                The model is retrained inside the Docker image at build time to guarantee sklearn version
-                consistency across all environments.
             </p>
         </div>
 
         <!-- Messages feed -->
-        <p class="messages-label">Messages</p>
+        <p class="messages-label">Live Message Feed with Sentiment Analysis</p>
         <div class="messages" id="messagesList">
             {% for message in messages %}
-                <p>{{ message[0] }}</p>
+                <div class="message-item">
+                    <span class="message-text">{{ message[0] }}</span>
+                    <span class="sentiment-badge sentiment-{{ message[1]|lower if message[1] else 'positive' }}">
+                        {{ message[1] if message[1] else 'Unknown' }}
+                    </span>
+                </div>
             {% endfor %}
         </div>
 
@@ -284,12 +320,22 @@
                     data: { new_message: message },
                     success: function (response) {
                         if (response && response.message) {
-                            $("#messagesList").append(
-                                "<p>" + $("<div>").text(response.message).html() + "</p>"
+                            let sentimentClass = "sentiment-" + response.sentiment.toLowerCase();
+                            let newItem = $(
+                                '<div class="message-item" style="display:none">' +
+                                    '<span class="message-text"></span>' +
+                                    '<span class="sentiment-badge"></span>' +
+                                '</div>'
                             );
+                            
+                            newItem.find('.message-text').text(response.message);
+                            newItem.find('.sentiment-badge').text(response.sentiment).addClass(sentimentClass);
+                            
+                            $("#messagesList").append(newItem);
+                            newItem.fadeIn(400);
+                            
                             messageInput.val("");
-                            // Auto-scroll to latest message
-                            $("#messagesList").scrollTop($("#messagesList")[0].scrollHeight);
+                            $("#messagesList").animate({ scrollTop: $("#messagesList")[0].scrollHeight }, 500);
                         }
                     },
                     error: function (xhr, status, error) {

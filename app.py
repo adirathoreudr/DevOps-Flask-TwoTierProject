@@ -23,7 +23,8 @@ def init_db():
         cur.execute('''
         CREATE TABLE IF NOT EXISTS messages (
             id INT AUTO_INCREMENT PRIMARY KEY,
-            message TEXT
+            message TEXT,
+            sentiment VARCHAR(20)
         );
         ''')
         mysql.connection.commit()  
@@ -36,7 +37,7 @@ def health():
 @app.route('/')
 def hello():
     cur = mysql.connection.cursor()
-    cur.execute('SELECT message FROM messages')
+    cur.execute('SELECT message, sentiment FROM messages')
     messages = cur.fetchall()
     cur.close()
     return render_template('index.html', messages=messages)
@@ -44,11 +45,17 @@ def hello():
 @app.route('/submit', methods=['POST'])
 def submit():
     new_message = request.form.get('new_message')
+    
+    # Predict sentiment
+    X = vectorizer.transform([new_message])
+    prediction = model.predict(X)[0]
+    sentiment = "Positive" if prediction == 1 else "Negative"
+
     cur = mysql.connection.cursor()
-    cur.execute('INSERT INTO messages (message) VALUES (%s)', [new_message])
+    cur.execute('INSERT INTO messages (message, sentiment) VALUES (%s, %s)', [new_message, sentiment])
     mysql.connection.commit()
     cur.close()
-    return jsonify({'message': new_message})
+    return jsonify({'message': new_message, 'sentiment': sentiment})
 
 @app.route('/predict', methods=['POST'])
 def predict():
@@ -58,11 +65,10 @@ def predict():
 
     return jsonify({
         "input": data,
-        "prediction": "Positive Value" if prediction == 1 else "Negative"
+        "prediction": "Positive" if prediction == 1 else "Negative"
     })
     
     
-
 if __name__ == '__main__':
     init_db()
     app.run(host='0.0.0.0', port=5000, debug=True)
